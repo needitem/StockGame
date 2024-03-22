@@ -19,7 +19,7 @@ struct STOCK {
 	int prevprevPrice;
 	int amount;
 	int good;
-	int event
+	int event;
 };
 
 typedef struct STOCK STOCK;
@@ -134,7 +134,7 @@ int main() {
 	do {
 		cls();
 		startlogo();
-		scanf("%c", &menu, sizeof(menu)); //1: new game 2: load game 3: exit
+		scanf_s("%c", &menu, sizeof(menu)); //1: new game 2: load game 3: exit
 		gameReset();
 		cls();
 		floan(20000);
@@ -142,18 +142,20 @@ int main() {
 		switch (menu)
 		{
 			case '1':
-			stockPriceChange();
-			save();
+			{
+				stockPriceChange();
+				for (i = 0; i < STOCK_SIZE; i++) {
+					if (rand() % 3 == 0) {
+						(pStock + i)->event = true;
+					}
+					else {
+						(pStock + i)->event = false;
+					}
+				}
+				break;
 
-			for (i=0; i<STOCK_SIZE; i++) {
-				if (rand()% 3 == 0) {
-					(pStock + i)->event = true;
-				}
-				else {
-					(pStock + i)->event = false;
-				}
 			}
-			break;
+
 			case '2':
 				load();
 				break;
@@ -162,8 +164,8 @@ int main() {
 				break;
 		default:
 			continue;
-			break;
 		}
+		break;
 
 	} while (1);
 	cls();
@@ -178,7 +180,7 @@ int main() {
 			title("You are bankrupted");
 			printf("You are bankrupted\n");
 			printf("Press any key to continue");
-			getch();
+			_getch();
 			break;
 		};
 
@@ -319,7 +321,7 @@ int main() {
 
 		gotoxy(0, 10);
 		showStockPrice();
-		showaiStat();
+		showAiStat();
 
 		if(hour == 0) {
 			for(i=0; i<STOCK_SIZE; i++) {
@@ -354,14 +356,14 @@ int main() {
 				title("You win");
 				printf("You win\n");
 				printf("Press any key to continue");
-				getch();
+				_getch();
 				break;
 			}
 			else {
 				title("You are bankrupted");
 				printf("You are bankrupted\n");
 				printf("Press any key to continue");
-				getch();
+				_getch();
 				break;
 			 }
 			month = 1;
@@ -442,7 +444,7 @@ void loanmenu() {
 		if(loanmoney > 1300000)
 		{
 			printf("한도를 초과하였습니다.\n");
-			getch();
+			_getch();
 		}
 		else
 		{
@@ -465,7 +467,22 @@ void mainmenu() {
 void stockPriceChange() {
 	int i = 0;
 	for (i = 0; i < STOCK_SIZE; i++) {
-		(pStock + i)->price = (pStock + i)->prevPrice + (rand() % 10000 - 5000);
+		if ((pStock + i)->event == true) {
+			if (rand() % 2 == 0) {
+				(pStock + i)->price += rand() % 1300;
+			}
+			else {
+				(pStock + i)->price -= rand() % 1300;
+			}
+		}
+		else {
+			if (rand() % 2 == 0) {
+				(pStock + i)->price += rand() % 300;
+			}
+			else {
+				(pStock + i)->price -= rand() % 300;
+			}
+		}
 	}
 }
 
@@ -556,8 +573,11 @@ void sellStock(int amt) {
 }
 
 void startMain() {
-	cls();
-	drawNews();
+	int i = 0;
+	for (i = 0; i < STOCK_SIZE; i++) {
+		printf("Company: %s  |  Price: %d\n", (pStock + i)->name, (pStock + i)->price);
+
+	}
 }
 
 void printStock(int stock) {
@@ -570,22 +590,38 @@ void printStock(int stock) {
 }
 
 void drawNews() {
-	int i = 0;
-	cls();
-	title("뉴스");
-	for (i = 0; i < STOCK_SIZE; i++) {
-		if ((pStock + i)->event == true) {
-			printf("%s의 이벤트가 발생했습니다.\n", (pStock + i)->name);
-		}
+	gotoxy(76, 2);
+	printf("Company: %s\n", (pStock + wantStock)->name);
+	gotoxy(76, 4);
+	printf("Price: %d\n", (pStock + wantStock)->price);
+	gotoxy(76, 5);
+	if ((pStock + wantStock)->good == true) {
+		printf("Good News\n");
 	}
+	else {
+		printf("Bad News\n");
+	}
+
 }
 
 void showStockPrice() {
-	int i = 0;
-	for (i = 0; i < STOCK_SIZE; i++) {
+	int max, min;
+	max = min = (pStock + 0)->price;
+	for (int i = 0; i < STOCK_SIZE; i++) {
+		if ((pStock + i)->price > max) {
+			max = (pStock + i)->price;
+		}
+		if ((pStock + i)->price < min) {
+			min = (pStock + i)->price;
+		}
+	}
+	for (int i = 0; i < STOCK_SIZE; i++) {
 		gotoxy(0, 10 + i);
 		printf("%s: %d", (pStock + i)->name, (pStock + i)->price);
 	}
+	gotoxy(0, 18);
+	printf("Max: %d, Min: %d", max, min);
+	
 }
 
 void buyMenu(int choice) {
@@ -620,7 +656,7 @@ void showStat() {
 	printf("세금: %d원\n", TAX(money));
 	printf("속도: %d\n", SPEED);
 	printf("Press any key to continue");
-	getch();
+	_getch();
 }
 
 void newsMenu() {
@@ -648,7 +684,7 @@ void aiSell(int stock, int price, int amt) {
 	}
 }
 
-void showaiStat() {
+void showAiStat() {
 	gotoxy(0, 20);
 	printf("적 돈: %d원\n", enemyMoney);
 	printf("적 보유주식: %d\n", wantStock);
