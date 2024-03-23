@@ -26,9 +26,9 @@
 ### 게임 화면
 ![메인 화면](./Images/img2.png)
 ### 주식 구매 화면
-![주식 구매 화면](./Images/img3.png)
+![주식 구매 화면](./Images/img4.png)
 ### 구매 후 화면
-![구매 후 화면](./Images/img4.png)
+![구매 후 화면](./Images/img3.png)
 
 
 
