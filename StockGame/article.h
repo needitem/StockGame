@@ -2,7 +2,7 @@
 #define MAX_ARTICLE 10
 #define MAX_HEADLINE 7
 
-char *GoodnewsHeadline[MAX_HEADLINE] = {
+char *Goodnews_Headline[MAX_HEADLINE] = {
 	"Stocks Soar",
 	"Market Booms",
 	"Stocks Rally",
@@ -12,7 +12,7 @@ char *GoodnewsHeadline[MAX_HEADLINE] = {
 	"Stocks Rise"
 };
 
-char *BadnewsHeadline[MAX_HEADLINE] = {
+char *Badnews_Headline[MAX_HEADLINE] = {
 	"Stocks Plunge",
 	"Market Crashes",
 	"Stocks Drop",

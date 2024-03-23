@@ -1,66 +1,74 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
 #include <windows.h>
 #include <stdbool.h>
 #include <time.h>
+
 #include "article.h"
-
-#define STOCK_SIZE 8
+/***************************************메모장***********************************************/
+//1. 저장/불러오기 만들어야됨(거의다함)
+//2. 가격 그래프
+//3. NEWSPAPER
+//
+//
+//
+//
+//
+//
+//
+/*********************************************************************************************/
+#define STOCK_COUNT 8
 #define START_MONEY 10000
-#define TAX(money) 30000+(money)*0.25
+#define TAX(money) (30000+(money)/4) 
+/***************************************구조체************************************************/
+struct STOCK////사용자가 보유한 주식----------나중에
+{
+	char* compname;
+	int stockprice;//주식가격
+	int prevprice;//1시간전주식가격
+	int amount;//보유개수
 
-struct STOCK {
-	char* name;
-	int price;
-	int prevPrice;
-	int prevprevPrice;
-	int amount;
-	int good;
-	int event;
 };
 
-typedef struct STOCK STOCK;
-STOCK stock[STOCK_SIZE] = {
-	{"SAMSUNG", 1000000, 1000000, 1000000, 0, 0, 0},
-	{"LG", 500000, 500000, 500000, 0, 0, 0},
-	{"SK", 200000, 200000, 200000, 0, 0, 0},
-	{"HYUNDAI", 300000, 300000, 300000, 0, 0, 0},
-	{"KIA", 400000, 400000, 400000, 0, 0, 0},
-	{"POSCO", 600000, 600000, 600000, 0, 0, 0},
-	{"NAVER", 700000, 700000, 700000, 0, 0, 0},
-	{"KAKAO", 800000, 800000, 800000, 0, 0, 0}
-};
-STOCK* pStock = stock;
+typedef struct STOCK s_STOCK_type;
+s_STOCK_type stock[STOCK_COUNT] = { {"samsoung"},{"LG"},{"Amazon"},{"Google"},{"bitcoin"},{"Aferica"},{"twitch"},{"Nexon"} };
+s_STOCK_type* p_stock = &stock;
 
-int money = START_MONEY;
-int loan = 0;
-int enemyMoney = START_MONEY;
-int myStock = 0;
-int wantStock = 0;
-int month = 1; int day = 1; int hour = 0;
-int aistock[STOCK_SIZE] = { 0, };
-int aistockPrice[STOCK_SIZE] = { 0, };
-int* pAistock = aistock;
+
+/*************************************전역변수************************************************/
+long long int money = 0, loan = 0;
+int mystock = 0;
+int want_buy = 0;
+int month = 0, day = 0, hour = 0;
 int days[12] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
-int aiRandom = 0;
-int SPEED = 50;
+int graph[STOCK_COUNT][52] = { 0, };///////내가 선택한
+//int stock_price[STOCK_COUNT] = { 0, }, prev_stock_price[STOCK_COUNT] = { 0, };
+//= { "samsoung","LG","Amazon","Google","bitcoin","Aferica","twitch","Nexon" };
+//int stock_bring[STOCK_COUNT] = { 0, }; // 각각의 주식 보유
+bool good_news[STOCK_COUNT];//True면 뉴스에서 좋은소식 False면 나쁜소식-->주식의 미래 결정
+bool stock_good_event[STOCK_COUNT];//뉴스랑 별개로 좋은확률
+bool stock_bad_event[STOCK_COUNT];//뉴스량 별개로 나쁜확률
+int hours = 0;
 
-typedef enum { NOCURSOR, SOLIDCURSOR, NORMALCURSOR } CURSOR_TYPE;
 
-void gotoxy(int x, int y) {
+/***********************************기본적으로쓰일것들*****************************************/
+void gotoxy(int x, int y)//커서이동
+{
 	COORD pos = { x, y };
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
-void textcolor(int color_number) {
+void textcolor(int color_number)//글자색변경/////초록 2 빨강 4----검정 7----- 연초록 10 연빨강 14
+{
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color_number);
 }
-void setcursor(CURSOR_TYPE c) {
-	CONSOLE_CURSOR_INFO CurInfo;
+typedef enum { NOCURSOR, SOLIDCURSOR, NORMALCURSOR } CURSOR_TYPE;
 
-	switch (c) {
+void setcursortype(CURSOR_TYPE c)//커서타입변경. NOSURSUR만쓸거임
+{
+	CONSOLE_CURSOR_INFO CurInfo;
+	switch (c)
+	{
 	case NOCURSOR:
 		CurInfo.dwSize = 1;
 		CurInfo.bVisible = FALSE;
@@ -76,350 +84,394 @@ void setcursor(CURSOR_TYPE c) {
 	}
 	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &CurInfo);
 }
-void cls() {
+
+void clrscr(void)//화면지우기
+{
 	system("cls");
 }
-int getkey(char* c) {
-	if(_kbhit()) {
-		*c = _getch();
-		return 0;
+
+void clearbuffer()
+{
+	while (_kbhit())
+	{
+		_getch();
 	}
-	return 1;
+	return 0;
 }
-void clearBuffer() {
-	while(getchar() != '\n');
+void getkey(char* c)
+{
+	if (_kbhit())
+	{
+		*c = _getch();
+	}
+	return 0;
 }
-void title(char* title) {
-	cls();
-	gotoxy(0, 0);
-	printf("Stock Game");
-	gotoxy(0, 1);
-	printf("%s", title);
+void title(char* title)
+{
+	clrscr();
+	int i;
+	printf("\n %s \n", title);
+	for (i = 0; i < 40; i++)
+	{
+		printf("-");
+
+	}
+	printf("\n");
+
 }
 
-void save();
-void load();
-void startlogo();
-void floan(long long int loan);
-void loanmenu();
-void mainmenu();
-void stockPriceChange();
-void gameReset();
-void interest();
-void setting();
-void setSpeed();
-void buyStock(int stock, int amt);
-void sellStock(int amt);
-void startMain();
-void printStock(int stock);
-void drawNews();
-void payback();
-void showStockPrice();
-void buyMenu(int choice);
-void sellMenu(int choice);
-void showStat();
-void newsMenu();
-void aiBuy(int stock,int price, int amt);
-void aiSell(int stock, int price, int amt);
-void showAiStat();
+/********************************************************************************************************/
 
-int main() {
-	srand((unsigned int)time(NULL));
-	int i=0, pausemenu=0;
-	char menu = 0;
-	char select = 0;
-	int cnt = 0;
+
+/******************************************함수정의****************************************************/
+
+void f_save();//저장
+void f_load();//로딩
+void f_startlogo();//시작화면
+void f_loan(int loan_money);//빚
+void f_loanmenu();//빚 빌리는데 
+void f_mainmenu();//메인메뉴
+void f_stock_price_change();//주식가격변동
+void f_game_reset();//초기화세팅
+void f_interest();//이자
+void f_buy_stock(int want_buy, int amount);//주식구매
+void f_sell_stock(int want_buy, int amount);//주식판매
+void f_startmain(); //주식회사 및 가격변동(증감 표시X)
+void f_print_stock_price(int choice);//주식가격출력
+void f_draw_newspaper(int choice);//주식 뉴스출력
+void f_draw_graph(int choice);//주식가격그래프
+void f_update_graph();// 그래프 업데이트
+void f_payback();//돈갚기
+void f_show_stock_price();//주식가격 메인화면 출력
+void f_buy_menu(int choice);//구매메뉴
+void f_sell_menu(int choice);//판매메뉴
+void f_showstock();//보유주식들
+void f_showstat();//스탯
+void f_showcompany();//각회사의 보유주식
+void f_stocksave();// 주식저장
+/******************************************메인함수*****************************************************/
+
+int main(void)
+{
+	srand(time(NULL));
+	int i = 0, menu = 0, pausemenu;
+	char select = '\0';
+	char* pselect = &select;
+	int cnt;
 	cnt = month = day = hour = 0;
-	
-	do {
-		cls();
-		startlogo();
-		scanf_s("%c", &menu, sizeof(menu)); //1: new game 2: load game 3: exit
-		gameReset();
-		cls();
-		floan(20000);
 
-		switch (menu)
+
+
+	f_startlogo();
+	scanf_s("%d", &menu);
+
+	f_game_reset();
+	clrscr();
+	f_loan(20000);
+
+
+	switch (menu)//메뉴선택 후 게임진행
+	{
+	case 1:
+	{
+		f_stock_price_change();
+		f_save();
+
+		for (i = 1; i < STOCK_COUNT; i++)
 		{
-			case '1':
+			if (rand() % 2 == 0)
 			{
-				stockPriceChange();
-				for (i = 0; i < STOCK_SIZE; i++) {
-					if (rand() % 3 == 0) {
-						(pStock + i)->event = true;
-					}
-					else {
-						(pStock + i)->event = false;
-					}
-				}
-				break;
-
+				*(good_news + i) = true;
 			}
-
-			case '2':
-				load();
-				break;
-			case '3':
-				exit(0);
-				break;
-		default:
-			continue;
+			else
+			{
+				*(good_news + i) = false;
+			}
 		}
 		break;
-
-	} while (1);
-	cls();
-	drawNews();
-
-	while (true)
+	}
+	case 2:
 	{
-		mainmenu();
-		newsMenu();
+		f_load();
+		break;
+	}
+	case 3:
+	{
+		exit(0);
+		break;
+	}
 
-		if(money<0) {
-			title("You are bankrupted");
-			printf("You are bankrupted\n");
-			printf("Press any key to continue");
-			_getch();
-			break;
-		};
 
-		gotoxy(52, 9 + wantStock);
-		printf("");
-		gotoxy(52, 10 + wantStock);
-		printf("<");
-		gotoxy(52, 11 + wantStock);
-		printf("");
+	}
+	clrscr();
 
-		printf(" ");
-		select = 0;
+	f_draw_newspaper(want_buy);
 
-		getkey(&select);
+	while (1)//메인 게임시작
+	{
+		f_mainmenu();
+		f_draw_graph(want_buy);
 
+		if (money <= 0)
+		{
+			clrscr();
+			printf("GG");
+			Sleep(5000);
+			exit(0);
+		}
+
+		gotoxy(52, 9 + want_buy);
+		printf("  ");
+
+		gotoxy(52, 10 + want_buy);
+		printf("◀");
+
+		gotoxy(52, 11 + want_buy);
+		printf("  ");
+
+		select = '\0';
+
+		getkey(pselect);
+		/*****************게임 작동키***********************************/
 		switch (select)
 		{
-		case 'j':
-		{
-			money += 100000;
-			break;
-		}
-		case 'B':
 		case 'b':
+		case 'B'://구매
 		{
-			buyMenu(wantStock);
+			f_buy_menu(want_buy);
 			break;
 		}
+		case 'v':
+		case 'V':
+		{
+			f_showstock();
+			break;
+		}
+
 		case 27:
 		{
-			cls();
-			title("Pause");
-			printf("1. 통계\n\n 2. 대출\n\n 3. 갚기\n\n 4. 설정\n\n 5. 끝내기\n\n ESC 돌아가기");
+			clrscr();
+
+			title("일시정지");
+			printf(" 1. 통  계\n\n 2. 대  출\n\n 3. 갚  기\n\n 4. 설  정\n\n 5. 끝내기\n\n Esc 돌아가기");
+
 			pausemenu = _getch();
 
 			switch (pausemenu)
 			{
-			case 1:
+			case '1'://통계
 			{
-				showStat();
+				f_showstat();
 				break;
 			}
-			case 2:
+			case '2'://대출
 			{
-				loanmenu();
+				f_loanmenu();
 				break;
 			}
-			case 3:
+			case '3'://갚기
 			{
-				payback();
-				cls();
+
+				f_payback();
+				clrscr();
 				break;
 			}
-			case 4:
+			case '4'://설정
 			{
-				setting();
-				cls();
+				clrscr();
 				break;
 			}
-			case 5:
+			case '5'://끝내기
 			{
-				save();
 				exit(0);
 				break;
 			}
 			case 27:
 			{
-				cls();
+				clrscr();
 				break;
 			}
 			default:
+			{
 				break;
 			}
-		}
-		case 'S':
-		case 's':
-		{
-			sellMenu(wantStock);
+			clrscr();
+
+			}
 			break;
 		}
-		case 'E':
-		case 'e':
+		case 's':
+		case 'S'://판매
 		{
-			save();
-			exit(0);
+			f_sell_menu(want_buy);
+			break;
+		}
+		case 'e':
+		case 'E'://저장
+		{
+
+			f_save();
+			break;
+		}
+		case 'i':
+		case 'I'://회사 정보
+		{
+			f_showcompany();
 			break;
 		}
 		case '2':
 		{
-			if (wantStock < STOCK_SIZE - 1) {
-				wantStock++;
+			if (want_buy < STOCK_COUNT - 1)
+			{
+				want_buy++;
+				f_draw_newspaper(want_buy);
 			}
-			drawNews(wantStock);
+
 			break;
 		}
 		case '8':
 		{
-			if (wantStock > 0) {
-				wantStock--;
-			}
-			drawNews(wantStock);
-			break;
-		}
-
-		default:
-			break;
-		}
-
-		Sleep(1000 / SPEED);
-		cnt++;
-		if (cnt % 50 == 1)
-		{
-			for (i = 0; i < STOCK_SIZE; i++)
+			if (want_buy > 0)
 			{
-				(pStock + i)->prevprevPrice = (pStock + i)->prevPrice;
-				(pStock + i)->prevPrice = (pStock + i)->price;
+				want_buy--;
+			}
+			f_draw_newspaper(want_buy);
+			break;
+		}
+		}
+		clearbuffer();
+		/**********************************************************************************************************/
+
+
+		Sleep(20);
+		cnt++;
+
+
+		if (cnt % 50 == 0)///1초
+		{
+			for (i = 0; i < STOCK_COUNT; i++)
+			{
+				(p_stock + i)->prevprice = (p_stock + i)->stockprice;
 			}
 			hour++;
-			stockPriceChange();
+			hours++;
+
+			f_stock_price_change();
+			f_update_graph();
+
 		}
-		if (cnt % 50 == 0)
+
+
+		if (cnt % 100 == 0)
 		{
-			for (i = 0; i < STOCK_SIZE; i++)
-			{
-				aiRandom = rand() % 3 + 1;
-				if ((pStock + i)->price - (pStock + i)->prevPrice > 300)
-				{
-					aiBuy(i, (pStock + i)->prevPrice, aiRandom);
-				}
-				else if((pStock + i)->price < (pStock + i)->prevPrice)
-				{
-					aiSell(i, (pStock + i)->prevPrice, *(aistock + i + 1));
-				}
 
-
-			}
 		}
+
+
 
 		gotoxy(0, 10);
-		showStockPrice();
-		showAiStat();
 
-		if(hour == 0) {
-			for(i=0; i<STOCK_SIZE; i++) {
-				if(rand()%3 == 0) {
-					if((pStock + i)->event == true) {
-						(pStock + i)->good = true;
+		f_show_stock_price();
+
+
+
+
+		if (hour == 0)
+		{
+			for (i = 0; i < STOCK_COUNT; i++)
+			{
+				if (rand() % 3 == 0)
+				{
+					if (*(stock_good_event + i) == false && *(stock_bad_event + i) == false)
+					{
+						*(good_news + i) = true;
 					}
-					else {
-						(pStock + i)->good = false;
+					else if (*(stock_good_event + i) == false && *(stock_bad_event + i) == false)
+					{
+						*(good_news + i) = false;
 					}
 				}
 			}
 		}
-		if (hour > 23)
+		if (hour > 23)//24시간=하루
 		{
-			save();
+			f_save();
 			hour = 0;
-			interest();
+			f_interest();
 			day++;
-			srand((unsigned int)time(NULL));
+			srand(time(NULL));
+
 		}
-		if (day > days[month - 1])
+		if (day > *(days + month) - 1)//한달. 달마다 세금.
 		{
+			day = 0;
 			month++;
-			day = 1;
 			money -= TAX(money);
 		}
-		if (month > 11)
+		if (month > 11)//1년이 끝
 		{
-			if(money - loan > 0)
-			{
-				title("You win");
-				printf("You win\n");
-				printf("Press any key to continue");
-				_getch();
-				break;
-			}
-			else {
-				title("You are bankrupted");
-				printf("You are bankrupted\n");
-				printf("Press any key to continue");
-				_getch();
-				break;
-			 }
-			month = 1;
+			month = 0;
 		}
 
 	}
-
-	return 0;
-
 }
+/*****************************************쓰일 함수들******************************************************/
 
-void save() {
-	FILE* file = fopen("save.txt", "w");
-	if (file == NULL) {
-		printf("파일을 열 수 없습니다.\n");
-		return;
+void f_save()
+{
+	int i = 0;
+	FILE* save = fopen("stock_save.txt", "wb");
+
+	if (save == NULL)
+	{
+		printf("입력 불가능입니다.");
+		exit(1);
+	};
+
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		fprintf(save, "%d\n", (p_stock + i)->amount);//Player가 가지고 있는 각각의 주식
 	}
-	for (int i = 0; i < STOCK_SIZE; i++) {
-		fprintf(file, "%d %d %d %d %d %d %d\n", (pStock + i)->price, (pStock + i)->prevPrice, (pStock + i)->prevprevPrice, (pStock + i)->amount, (pStock + i)->good, (pStock + i)->event);
+	fprintf(save, "\n\n");
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		fprintf(save, "%d,%d\n", (p_stock + i)->prevprice, (p_stock + i)->stockprice);//주식의 1시간전,현재 가격
 	}
-	fprintf(file, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n", money, loan, enemyMoney, myStock, wantStock, month, day, hour, aistock[0], aistock[1], aistock[2], aistock[3], aistock[4], aistock[5], aistock[6], aistock[7]);
-	fclose(file);
-}
-
-void load() {
-	FILE* file = fopen("save.txt", "r");
-	if (file == NULL) {
-		printf("파일을 열 수 없습니다.\n");
-		return;
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		fprintf(save, "%d\n", *(good_news + i));// 주식의 미래결정
 	}
-	for (int i = 0; i < STOCK_SIZE; i++) {
-		fscanf(file, "%d %d %d %d %d %d %d", &(pStock + i)->price, &(pStock + i)->prevPrice, &(pStock + i)->prevprevPrice, &(pStock + i)->amount, &(pStock + i)->good, &(pStock + i)->event);
+	for (i = 0; i < STOCK_COUNT; i++)//뉴스랑 별개로 좋은확률
+	{
+		fprintf(save, "%d\n", *(stock_good_event + i));
 	}
-	fscanf(file, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &money, &loan, &enemyMoney, &myStock, &wantStock, &month, &day, &hour, &aistock[0], &aistock[1], &aistock[2], &aistock[3], &aistock[4], &aistock[5], &aistock[6], &aistock[7]);
-	fclose(file);
+	for (i = 0; i < STOCK_COUNT; i++)//뉴스량 별개로 나쁜확률
+	{
+		fprintf(save, "%d\n", *(stock_bad_event + i));
+	}
+
+	fprintf(save, "돈:%lld\n 빚:%lld\n 보유주식개수:%d\n 달:%d 월:%d 시:%d", money, loan, mystock, month, day, hour);//Player 돈,빚,전체주식,달,일,시간,
+	fclose(save);
+}//미완
+void f_load()
+{
+
+}//미완
+void f_startlogo()
+{
+	printf("\n\n\t\t\t\t\t          새로운 게임  : 1");
+	printf("\n\n\t\t\t\t\t          불 러 오 기  : 2");
+	printf("\n\n\t\t\t\t\t          종       료  : 3");
+	printf("\n\n\n\t\t\t\t\t\t    입력하세요:");
 }
-
-void startlogo() {
-	gotoxy(0, 0);
-	printf("Stock Game");
-	gotoxy(0, 1);
-	printf("1. New Game\n");
-	gotoxy(0, 2);
-	printf("2. Load Game\n");
-	gotoxy(0, 3);
-	printf("3. Exit\n");
+void f_loan(int loan_money)
+{
+	loan += loan_money;
+	money += loan_money;
 }
-
-void floan(long long int loan) {
-	money += loan;
-	loan += loan;
-
-}
-
-void payback() {
-	if (money > loan)
+void f_payback()
+{
+	if (money >= loan)
 	{
 		money -= loan;
 		loan = 0;
@@ -429,267 +481,389 @@ void payback() {
 		loan -= money;
 		money = 0;
 	}
+
 }
-
-void loanmenu() {
-	int loanmoney = 0;
-	int check = 1;
-
-	do
+void f_loanmenu()
+{
+	long long int loanmoney = 0;
+	clrscr();
+	title("대출");
+	printf("\n 얼마를 대출받으시겠습니까? (한도 10억)");
+	if (loan <= 1000000000)
 	{
-		cls();
-		title("대출");
-		printf("\n얼마를 대출받으시겠습니까? (한도 130만원)");
-		scanf("%d", &loanmoney);
-		if(loanmoney > 1300000)
+		scanf_s("%ld", &loanmoney);
+	}
+
+	f_loan(loanmoney);
+}
+void f_mainmenu()
+{
+	gotoxy(0, 1);
+	printf("\n B 사기, S 팔기, E 저장, I 회사 정보, 8 / 2 회사 선택, Esc 메뉴");
+	gotoxy(0, 3);
+	printf("\n 현재 내 돈 : %lld원, 갚아야 할 돈 : %lld원, 보유 주식 주 : %d\n\n\n\n", money, loan, mystock);
+	gotoxy(0, 5);
+	printf("\n %d월 %d일 %d시   ", month + 1, day + 1, hour);
+	printf("\n\n 이번 달 납부할 세금은 %d원입니다. %d일 남았습니다.\n", TAX(money), days[month] - day);
+
+}
+void f_startmain()
+{
+
+	int i = 0;
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		printf("회사 : %+10s     가격|:   %8d\n", (p_stock + i)->compname, (p_stock + i)->stockprice);
+	}
+}
+void f_newsmenu()//미완
+{
+
+	int i = 0;
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		printf("회사 : %8s\n", (p_stock + i)->compname);
+		printf("\n\n");
+		printf("현재주가 : %10d\n", (p_stock + i)->stockprice);
+		if (*(good_news + i) == true)
 		{
-			printf("한도를 초과하였습니다.\n");
-			_getch();
+			printf("전문가 의견 : 긍정적");
 		}
 		else
 		{
-			floan(loanmoney);
-			check = 0;
+			printf("전문가 의견 : 부정적");
 		}
-	} while (check);
-}
+		printf("\n\n");
 
-void mainmenu() {
-	gotoxy(0, 0);
-	printf("\n B : 매수\n S: 매도\n E: 저장\n 2/8 선택, ESC 메뉴");
-	gotoxy(0, 3);
-	printf("\n 내 돈: %d원, 빚: %d원, 보유주식: %d", money, loan, myStock);
-	gotoxy(0, 5);
-	printf("\n %d월 %d일 %d시", month, day, hour);
-	printf("\n\n 이번달 납부할 세금은 %d원입니다.", TAX(money));
-}
 
-void stockPriceChange() {
-	int i = 0;
-	for (i = 0; i < STOCK_SIZE; i++) {
-		if ((pStock + i)->event == true) {
-			if (rand() % 2 == 0) {
-				(pStock + i)->price += rand() % 1300;
-			}
-			else {
-				(pStock + i)->price -= rand() % 1300;
-			}
-		}
-		else {
-			if (rand() % 2 == 0) {
-				(pStock + i)->price += rand() % 300;
-			}
-			else {
-				(pStock + i)->price -= rand() % 300;
-			}
-		}
 	}
-}
+}//미완
+void f_stock_price_change()////////////////0원 이하로 안떨어지게
+{
+	int i = 0;
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		if (*(good_news + i) == true && *(stock_good_event + i) == false)
+		{
+			if (rand() % 2 == 0)
+			{
+				(p_stock + i)->stockprice += (rand() % 1000);
+			}
+			else
+			{
+				(p_stock + i)->stockprice -= (rand() % 100);
+			}
+		}
+		else if (*(good_news + i) == true && *(stock_good_event + i) == true)
+		{
+			(p_stock + i)->stockprice += (rand() % 2000);
+		}
+		else if (*(good_news + i) == false && *(stock_good_event + i) == false)
+		{
+			if (rand() % 2 == 0)
+			{
+				(p_stock + i)->stockprice += (rand() % 100);
+			}
+			else
+			{
+				(p_stock + i)->stockprice -= (rand() % 1000);
+			}
 
-void gameReset() {
+		}
+		else
+		{
+			(p_stock + i)->stockprice -= (rand() % 2000);
+		}
+
+		if (((p_stock + i)->stockprice) < 2000)
+		{
+			(p_stock + i)->stockprice = 2000;
+		}
+
+	}
+
+}
+void f_game_reset()
+{
+	int i = 0;
 	money = START_MONEY;
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		(p_stock + i)->stockprice = 10000;
+		*(good_news + i) = true;
+		*(stock_bad_event + i) = false;
+		*(stock_good_event + i) = false;
+	}
+	mystock = 0;
 	loan = 0;
-	enemyMoney = START_MONEY;
-	myStock = 0;
-	wantStock = 0;
-	month = 1; day = 1; hour = 0;
-}
+	hour++;
+	f_stock_price_change();
+	setcursortype(NOCURSOR);
 
-void interest() {
-	loan = loan * 1.1;
-}
 
-void setting() {
-	int menu = 0;
-	cls();
-	title("설정");
-	printf("1. 속도\n\n 2. 돌아가기");
-	menu = _getch();
-	switch (menu)
-	{
-	case 1:
-	{
-		setSpeed();
-		break;
-	}
-	case 2:
-	{
-		cls();
-		break;
-	}
-	default:
-		break;
-	}
 }
-
-void setSpeed() {
-	int speed = 0;
-	cls();
-	title("속도");
-	printf("1. 빠름\n\n 2. 보통\n\n 3. 느림");
-	speed = _getch();
-	switch (speed)
-	{
-	case 1:
-	{
-		SPEED = 25;
-		break;
-	}
-	case 2:
-	{
-		SPEED = 50;
-		break;
-	}
-	case 3:
-	{
-		SPEED = 100;
-		break;
-	}
-	default:
-		break;
-	}
+void f_interest()
+{
+	loan += (loan * 0.1);
 }
+void f_buy_stock(int want_buy, int amount)
+{
+	clrscr();
 
-void buyStock(int stock, int amt) {
-	if (money >= (pStock + stock)->price * amt) {
-		money -= (pStock + stock)->price * amt;
-		(pStock + stock)->amount += amt;
-		myStock += amt;
-	}
-	else {
-		printf("돈이 부족합니다.\n");
-	}
-}
-
-void sellStock(int amt) {
-	if (myStock >= amt) {
-		money += (pStock + wantStock)->price * amt;
-		(pStock + wantStock)->amount -= amt;
-		myStock -= amt;
-	}
-	else {
-		printf("주식이 부족합니다.\n");
-	}
-}
-
-void startMain() {
 	int i = 0;
-	for (i = 0; i < STOCK_SIZE; i++) {
-		printf("Company: %s  |  Price: %d\n", (pStock + i)->name, (pStock + i)->price);
+	for (i = 0; i < amount; i++)
+	{
+		if ((p_stock + want_buy)->stockprice <= money)
+		{
 
+			mystock++;
+			money -= (p_stock + want_buy)->stockprice;
+			(p_stock + want_buy)->amount++;
+		}
+	}
+
+
+}
+void f_sell_stock(int amounts)
+{
+
+	int i = 0;
+
+	for (i = 0; i < amounts; i++)
+	{
+		if ((p_stock + want_buy)->amount >= amounts)
+		{
+			mystock--;
+			money += (p_stock + want_buy)->stockprice;
+			(p_stock + want_buy)->amount--;
+		}
+
+	}
+}///미완
+////보유한 주식이여만 팔수있음.
+void f_showstock()
+{
+	clrscr();
+
+	if (mystock <= 0)
+	{
+		printf("주식이 없습니다.");
 	}
 }
 
-void printStock(int stock) {
-	gotoxy(0, 0);
-	printf("주식명: %s\n", (pStock + stock)->name);
-	printf("가격: %d\n", (pStock + stock)->price);
-	printf("전일가: %d\n", (pStock + stock)->prevPrice);
-	printf("전전일가: %d\n", (pStock + stock)->prevprevPrice);
-	printf("보유주식: %d\n", (pStock + stock)->amount);
-}
-
-void drawNews() {
-	gotoxy(76, 2);
-	printf("Company: %s\n", (pStock + wantStock)->name);
-	gotoxy(76, 4);
-	printf("Price: %d\n", (pStock + wantStock)->price);
-	gotoxy(76, 5);
-	if ((pStock + wantStock)->good == true) {
-		printf("Good News\n");
-	}
-	else {
-		printf("Bad News\n");
-	}
-
-}
-
-void showStockPrice() {
+void f_print_stock_price(int i)
+{
 	int max, min;
-	max = min = (pStock + 0)->price;
-	for (int i = 0; i < STOCK_SIZE; i++) {
-		if ((pStock + i)->price > max) {
-			max = (pStock + i)->price;
+	max = (p_stock + i)->stockprice - (p_stock + i)->prevprice;
+	min = (p_stock + i)->prevprice - (p_stock + i)->stockprice;
+	printf(" 회사 :");
+	if ((p_stock + i)->prevprice < (p_stock + i)->stockprice)
+	{
+		textcolor(10);
+		printf("%s", (p_stock + i)->compname);
+		textcolor(7);
+	}
+	else
+	{
+		textcolor(12);
+		printf("%s", (p_stock + i)->compname);
+		textcolor(7);
+	}
+	printf("\t\t가격 : %8d원", (p_stock + i)->stockprice);
+	if ((p_stock + i)->prevprice < (p_stock + i)->stockprice)
+	{
+		textcolor(2);
+		printf("▲%7d원", max);
+		textcolor(7);
+	}
+	else
+	{
+		textcolor(4);
+		printf("▼%7d원", min);
+		textcolor(7);
+	}
+	max = min = 0;
+	printf("\n");
+}
+void f_draw_newspaper(int choice)
+{
+
+	gotoxy(88, 7);
+	printf("목  대 신 문     %d월 %d일", month + 1, day + 1);
+	gotoxy(76, 8);
+	printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+	gotoxy(70, 10);
+
+	if (good_news[choice] == true)
+	{
+		printf(" %s%s ", (p_stock + choice)->compname, Goodnews_Headline[rand() % MAX_HEADLINE]);
+	}
+	else
+	{
+		printf(" %s%s ", (p_stock + choice)->compname, Badnews_Headline[rand() % MAX_HEADLINE]);
+	}
+
+	gotoxy(70, 11);
+
+	if (good_news[choice] == true)
+	{
+		int i = 0, j = 0;
+		int Article_rand = rand() % MAX_ARTICLE;
+		printf(" %s", (p_stock + choice)->compname);
+
+		while (GoodArticle[Article_rand][i] != '\0')
+		{
+			if (GoodArticle[Article_rand][i] == '\n')
+			{
+
+				gotoxy(65, 12 + j);
+				j++;
+			}
+			else
+			{
+				putchar(GoodArticle[Article_rand][i]);
+			}
+			i++;
 		}
-		if ((pStock + i)->price < min) {
-			min = (pStock + i)->price;
-		}
 	}
-	for (int i = 0; i < STOCK_SIZE; i++) {
-		gotoxy(0, 10 + i);
-		printf("%s: %d", (pStock + i)->name, (pStock + i)->price);
-	}
-	gotoxy(0, 18);
-	printf("Max: %d, Min: %d", max, min);
-	
-}
+	else
+	{
+		int i = 0, j = 0;
+		int Article_rand = rand() % MAX_ARTICLE;
+		printf(" %s", (p_stock + choice)->compname);
 
-void buyMenu(int choice) {
-	int amt = 0;
-	cls();
-	title("매수");
-	printStock(choice);
-	printf("얼마나 매수하시겠습니까?");
-	scanf("%d", &amt);
-	buyStock(choice, amt);
-}
-
-void sellMenu(int choice) {
-	int amt = 0;
-	cls();
-	title("매도");
-	printStock(choice);
-	printf("얼마나 매도하시겠습니까?");
-	scanf("%d", &amt);
-	sellStock(amt);
-}
-
-void showStat() {
-	cls();
-	title("통계");
-	printf("내 돈: %d원\n", money);
-	printf("빚: %d원\n", loan);
-	printf("보유주식: %d\n", myStock);
-	printf("적 돈: %d원\n", enemyMoney);
-	printf("적 보유주식: %d\n", wantStock);
-	printf("현재 시간: %d월 %d일 %d시\n", month, day, hour);
-	printf("세금: %d원\n", TAX(money));
-	printf("속도: %d\n", SPEED);
-	printf("Press any key to continue");
-	_getch();
-}
-
-void newsMenu() {
-	int i = 0;
-	for (i = 0; i < STOCK_SIZE; i++) {
-		if ((pStock + i)->event == true) {
-			drawNews();
+		while (BadArticle[Article_rand][i] != '\0')
+		{
+			if (BadArticle[Article_rand][i] == '\n')
+			{
+				gotoxy(65, 12 + j);
+				j++;
+			}
+			else
+			{
+				putchar(BadArticle[Article_rand][i]);
+			}
+			i++;
 		}
 	}
 }
 
-void aiBuy(int stock, int price, int amt) {
-	if (enemyMoney >= price * amt) {
-		enemyMoney -= price * amt;
-		(pStock + stock)->amount += amt;
-		wantStock += amt;
-	}
-}
 
-void aiSell(int stock, int price, int amt) {
-	if (wantStock >= amt) {
-		enemyMoney += price * amt;
-		(pStock + stock)->amount -= amt;
-		wantStock -= amt;
-	}
-}
-
-void showAiStat() {
+void f_draw_graph(int choice)
+{
+	int i, j = 0;
 	gotoxy(0, 20);
-	printf("적 돈: %d원\n", enemyMoney);
-	printf("적 보유주식: %d\n", wantStock);
+#if 1
+	printf(" 24000                                                                     \n 22000                                                                     \n 20000                                                                     "
+		"\n 18000                                                                     \n 16000                                                                     \n 14000                                                                     "
+		"\n 12000                                                                     \n 10000                                                                     \n  8000                                                                     "
+		"\n  6000                                                                     \n  4000                                                                     \n  2000                                                                     \n                                                                              ");
+#endif
+	gotoxy(7, 25);
+
+	for (i = 46; i >= 0; i--)
+	{
+		if (*(*(graph + choice) + i) > 0 && *(*(graph + choice) + i) < 26000)
+		{
+			gotoxy(7 + hours, 31 - ((int)((*(*(graph + choice) + i) % 26000) / 2000) - 1));
+			printf("*");
+		}
+	}
+
 }
 
-// Path: StockGame/src.h
+void f_update_graph()
+{
+	int i = 0, j = 0;
+	for (i = 0; i < STOCK_COUNT; i++)
+
+	{
+		for (j = 50; j > 0; j--)
+		{
+			graph[i][j + 1] = graph[i][j];
+		}
+		graph[i][0] = (p_stock + i)->stockprice;
+	}
+}
+void f_show_stock_price()
+{
+	int i = 0;
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		f_print_stock_price(i);
+
+	}
+}
+void f_buy_menu(int choice)
+{
+	int amount = 0;
+	clrscr();
+	title("주식사기");
+	printf("몇개를 구매할겁니까:");
 
 
+	scanf_s("%d", &amount);
+
+	getchar();
+	if (amount > 0)
+	{
+		f_buy_stock(choice, amount);
+	}
+
+}
+void f_sell_menu(int choice)
+{
+	int amount = 0;
+	clrscr();
+	title("주식팔기");
+	printf("몇 개의 주식을 팔겠습니까:");
+
+	scanf_s("%d", &amount);
+
+	printf("%d", amount);
+
+	if (amount > 0)
+	{
+		f_sell_stock(amount);
+	}
+
+
+	clrscr();
+}
+void f_showstat()
+{
+	int i = 0;
+	clrscr();
+	title("통계");
+	printf("\n현재 가진돈:%lld 주식개수:%d\n", money, mystock);
+	for (i = 0; i < STOCK_COUNT; i++)
+	{
+		if ((p_stock + i)->amount > 0)
+		{
+			printf("%s : %d개\n", (p_stock + i)->compname, (p_stock + i)->amount);
+		}
+	}
+	getchar();
+
+	clrscr();
+}
+void f_showcompany()
+{
+	clrscr();
+
+	if (p_stock->amount <= 0)
+	{
+		printf("현재 주식이 없습니다.");
+	}
+	else
+	{
+		title("보유 주식");
+		printf("현재 Player가 %s의 가지고 있는 주식은 %d개 입니다.\n", (p_stock + want_buy)->compname, (p_stock + want_buy)->amount);
+		printf("처음화면으로 돌아가시면 ESC를 누르세요..");
+	}
+	_getch();
+	clrscr();
+}
+
+/*************************************************************************************************************/
